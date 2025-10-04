@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Inventory Tracker</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="robots" content="index,follow">
+  <meta name="generator" content="GrapesJS Studio">
+  <meta name="description" content="Simple Inventory Tracker with CRUD operations"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="./style.css">
+  </head>
+  <body class="gjs-t-body"><header class="header-bar"><div class="header-container"><h1 class="gjs-t-h1 header-title">Inventory Tracker</h1><div class="header-hint"><p class="header-hint-text">Simple CRUD demo — add, edit, and delete items</p></div></div></header><main class="main-content"><section id="i53lj" class="add-edit-section"><div id="ib52g" class="section-header"><h2 id="izy6t" class="gjs-t-h2 section-title">Manage Items</h2><small id="iuppp" class="section-subtitle">Create or update inventory entries</small></div><article id="iguhe" class="gjs-t-border card-form-wrapper"><form method="get" id="itemForm" novalidate="" class="add-edit-form"><input type="hidden" id="editingId" value=""/><div id="i85r3" class="form-grid"><div id="ijwyb" class="field-group-name"><label for="name" id="i0nse" class="field-label-name">Item Name</label><input type="text" id="name" name="name" placeholder="e.g., Wireless Mouse" required class="gjs-t-border field-input-name"/><small id="nameError" class="field-error-name"></small></div><div id="i8gq6" class="field-group-quantity"><label for="quantity" id="i8z8t" class="field-label-quantity">Quantity</label><input type="number" id="quantity" name="quantity" min="0" step="1" placeholder="e.g., 10" required class="gjs-t-border field-input-quantity"/><small id="quantityError" class="field-error-quantity"></small></div><div id="iwua4" class="field-group-price"><label for="price" id="iei5g" class="field-label-price">Price</label><input type="number" id="price" name="price" min="0" step="0.01" placeholder="e.g., 19.99" required class="gjs-t-border field-input-price"/><small id="priceError" class="field-error-price"></small></div></div><div id="i5w0j" class="form-actions"><button type="submit" id="submitBtn" class="gjs-t-button primary-submit-button">Add Item</button><button type="button" id="cancelEditBtn" class="gjs-t-border secondary-cancel-button">Cancel Edit</button><button type="button" id="clearFormBtn" class="gjs-t-border secondary-clear-button">Clear Form</button></div></form></article><script>
+    (function() {
+      const root = document.getElementById('i53lj');
+      if (!root) return;
+
+      const clearBtn = root.querySelector('#clearFormBtn');
+      const nameInput = root.querySelector('#name');
+      const qtyInput = root.querySelector('#quantity');
+      const priceInput = root.querySelector('#price');
+      const nameError = root.querySelector('#nameError');
+      const qtyError = root.querySelector('#quantityError');
+      const priceError = root.querySelector('#priceError');
+
+      function clearErrors() {
+        if (nameError) nameError.textContent = '';
+        if (qtyError) qtyError.textContent = '';
+        if (priceError) priceError.textContent = '';
+      }
+
+      function clearFormFields() {
+        if (nameInput) nameInput.value = '';
+        if (qtyInput) qtyInput.value = '';
+        if (priceInput) priceInput.value = '';
+        clearErrors();
+        if (nameInput) nameInput.focus();
+      }
+
+      if (clearBtn) {
+        clearBtn.addEventListener('click', clearFormFields);
+      }
+    })();
+  </script></section><section id="iea2k" class="inventory-list-section"><section id="inventorySearchBarComponent" role="search" aria-label="Inventory search" class="inventory-search-bar"><article id="i6bwg" class="gjs-t-border inventory-search-card"><label for="inventory-search-input" id="ilibh" class="search-label">Search Items</label><div id="i1ooik" class="search-wrap"><img src="https://api.iconify.design/mdi:magnify.svg?color=currentColor&amp;width=20&amp;height=20" alt="Search icon" id="i20cub" class="search-icon"/><input type="search" id="inventory-search-input" placeholder="Search by item name..." autocomplete="off" aria-controls="itemsTbody" aria-describedby="inventory-search-help" class="search-input"/><button type="button" id="inventory-search-clear" hidden aria-label="Clear search" class="clear-btn"><img src="https://api.iconify.design/mdi:close.svg?color=currentColor&amp;width=16&amp;height=16" alt="Clear" id="ijao2u"/>
+          Clear
+        </button></div><small id="inventory-search-help" class="sr-only">Type to filter the inventory table by item name</small><div aria-hidden="true" class="low-hint"><img src="https://api.iconify.design/mdi:alert-outline.svg?color=currentColor&amp;width=16&amp;height=16" alt="Low stock indicator"/>
+        Rows highlighted indicate low stock (less than 5).
+      </div></article><script id="if1ojg">
+      (function(){
+        const root = document.getElementById('inventorySearchBarComponent');
+        if(!root) return;
+
+        const input = root.querySelector('#inventory-search-input');
+        const clearBtn = root.querySelector('#inventory-search-clear');
+        const tbody = document.getElementById('itemsTbody');
+
+        function getRows(){
+          if(!tbody) return [];
+          return Array.from(tbody.querySelectorAll('tr'));
+        }
+
+        function isBuiltInEmptyRow(tr){
+          if(!tr) return false;
+          if(tr.getAttribute('data-no-match') === 'true') return false;
+          const tds = tr.querySelectorAll('td');
+          return tds.length === 1 && (tds[0].hasAttribute('colspan') || tds[0].colSpan >= 4);
+        }
+
+        function applyLowStockHighlight(){
+          if(!tbody) return;
+          const rows = getRows();
+          rows.forEach(tr => {
+            const cells = tr.querySelectorAll('td');
+            if(cells.length > 1){
+              const qtyCell = cells[1];
+              const qtyVal = parseInt((qtyCell ? qtyCell.textContent : '0'), 10);
+              if(Number.isFinite(qtyVal) && qtyVal < 5){
+                tr.classList.add('low-stock');
+              }else{
+                tr.classList.remove('low-stock');
+              }
+            }else{
+              tr.classList.remove('low-stock');
+            }
+          });
+        }
+
+        function applyFilter(){
+          if(!tbody) return;
+          const q = (input.value || '').trim().toLowerCase();
+          const rows = getRows();
+
+          let hasDataRows = false;
+          let shown = 0;
+
+          rows.forEach(tr => {
+            const cells = tr.querySelectorAll('td');
+            if(cells.length > 1){
+              hasDataRows = true;
+              const nameCell = cells[0];
+              const nameText = (nameCell ? nameCell.textContent : '') || '';
+              const match = q === '' || nameText.toLowerCase().includes(q);
+              tr.style.display = match ? '' : 'none';
+              if(match) shown++;
+            }
+          });
+
+          // Handle built-in empty row visibility
+          const builtInEmpty = rows.find(isBuiltInEmptyRow);
+          if(builtInEmpty){
+            if(hasDataRows){
+              builtInEmpty.style.display = 'none';
+            }else{
+              builtInEmpty.style.display = q ? 'none' : '';
+            }
+          }
+
+          // Manage "No matching items" row
+          let noMatchRow = tbody.querySelector('tr[data-no-match="true"]');
+          if(q && hasDataRows && shown === 0){
+            if(!noMatchRow){
+              noMatchRow = document.createElement('tr');
+              noMatchRow.setAttribute('data-no-match','true');
+              const td = document.createElement('td');
+              td.colSpan = 4;
+              td.className = 'empty-state-cell';
+              td.textContent = 'No matching items.';
+              noMatchRow.appendChild(td);
+              tbody.appendChild(noMatchRow);
+            }
+          }else{
+            if(noMatchRow) noMatchRow.remove();
+          }
+
+          clearBtn.hidden = q === '';
+
+          // After filtering, ensure low stock highlighting is applied
+          applyLowStockHighlight();
+        }
+
+        function handleInput(){
+          applyFilter();
+        }
+
+        function clearSearch(){
+          input.value = '';
+          applyFilter();
+          input.focus();
+        }
+
+        input.addEventListener('input', handleInput);
+        clearBtn.addEventListener('click', clearSearch);
+
+        // Re-apply filter and highlighting whenever the table changes (e.g., add/edit/delete)
+        const observer = new MutationObserver(() => applyFilter());
+        if(tbody){
+          observer.observe(tbody, { childList: true });
+        }
+
+        // Initialize
+        setTimeout(applyFilter, 0);
+      })();
+    </script></section><div id="iezmh" class="inventory-section-header"><h2 id="iqtea" class="gjs-t-h2 inventory-section-title">Inventory</h2><div id="ilmok" class="inventory-actions"><button type="button" id="seedBtn" class="gjs-t-border seed-data-button">Seed Demo Data</button><button type="button" id="clearAllBtn" class="gjs-t-border clear-all-button">Clear All</button></div></div><article id="ikyjd" class="gjs-t-border card-table-wrapper"><div id="i9qzc" class="table-scroll-container"><table id="i3vll" class="inventory-table"><thead id="iwuhq" class="table-head"><tr id="i076x"><th id="iyu8s" class="table-head-cell-name">Item Name</th><th id="i5efl" class="table-head-cell-quantity">Quantity</th><th id="i5rdy" class="table-head-cell-price">Price</th><th id="iyzp9" class="table-head-cell-actions">Actions</th></tr></thead><tbody id="itemsTbody"><tr id="is2jd"><td colspan="4" id="izg9a" class="empty-state-cell">No items yet. Add your first item above.</td></tr></tbody></table></div><div id="ijcpq" class="table-footer"><p id="summaryText" class="summary-text">0 items • Total value: $0.00</p><div id="ilbyj" class="footer-actions"><button type="button" id="exportBtn" class="gjs-t-border export-button">Export JSON</button><label for="importFile" id="i3x6j" class="gjs-t-border import-label">Import JSON</label><input type="file" id="importFile" accept="application/json" class="import-file-input"/></div></div></article></section></main><footer class="footer"><small>This is a front‑end demo. Data is stored locally in your browser.</small></footer><script>
+(function(){
+  const storageKey = 'inventoryItems';
+
+  const els = {
+    form: document.getElementById('itemForm'),
+    editingId: document.getElementById('editingId'),
+    name: document.getElementById('name'),
+    quantity: document.getElementById('quantity'),
+    price: document.getElementById('price'),
+    nameError: document.getElementById('nameError'),
+    quantityError: document.getElementById('quantityError'),
+    priceError: document.getElementById('priceError'),
+    submitBtn: document.getElementById('submitBtn'),
+    cancelEditBtn: document.getElementById('cancelEditBtn'),
+    tbody: document.getElementById('itemsTbody'),
+    summaryText: document.getElementById('summaryText'),
+    clearAllBtn: document.getElementById('clearAllBtn'),
+    seedBtn: document.getElementById('seedBtn'),
+    exportBtn: document.getElementById('exportBtn'),
+    importFile: document.getElementById('importFile'),
+  };
+
+  function readItems(){
+    try{
+      const raw = localStorage.getItem(storageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    }catch(e){
+      return [];
+    }
+  }
+
+  function writeItems(items){
+    localStorage.setItem(storageKey, JSON.stringify(items));
+  }
+
+  function uid(){
+    return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  }
+
+  function formatMoney(n){
+    const x = Number.isFinite(n) ? n : 0;
+    return '$' + x.toFixed(2);
+  }
+
+  function clearErrors(){
+    els.nameError.textContent = '';
+    els.quantityError.textContent = '';
+    els.priceError.textContent = '';
+  }
+
+  function validateForm(){
+    clearErrors();
+    let ok = true;
+
+    const name = els.name.value.trim();
+    const qty = Number(els.quantity.value);
+    const price = Number(els.price.value);
+
+    if(!name){
+      els.nameError.textContent = 'Item name is required.';
+      ok = false;
+    }
+
+    if(!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)){
+      els.quantityError.textContent = 'Quantity must be a non-negative integer.';
+      ok = false;
+    }
+
+    if(!Number.isFinite(price) || price < 0){
+      els.priceError.textContent = 'Price must be a non-negative number.';
+      ok = false;
+    }
+
+    return ok;
+  }
+
+  function resetForm(){
+    els.form.reset();
+    els.editingId.value = '';
+    els.submitBtn.textContent = 'Add Item';
+    els.cancelEditBtn.classList.add('hidden');
+    clearErrors();
+  }
+
+  function enterEditMode(item){
+    els.editingId.value = item.id;
+    els.name.value = item.name;
+    els.quantity.value = item.quantity;
+    els.price.value = item.price;
+    els.submitBtn.textContent = 'Update Item';
+    els.cancelEditBtn.classList.remove('hidden');
+    els.name.focus();
+  }
+
+  function computeSummary(items){
+    const count = items.length;
+    const total = items.reduce((acc, it) => acc + (Number(it.quantity) * Number(it.price)), 0);
+    els.summaryText.textContent = `${count} ${count === 1 ? 'item' : 'items'} • Total value: ${formatMoney(total)}`;
+  }
+
+  function render(){
+    const items = readItems();
+    els.tbody.innerHTML = '';
+
+    if(items.length === 0){
+      const tr = document.createElement('tr');
+      tr.setAttribute('data-gjs-name','Empty State Row');
+      const td = document.createElement('td');
+      td.setAttribute('data-gjs-name','Empty State Cell');
+      td.colSpan = 4;
+      td.className = 'px-4 py-6 text-center text-slate-500';
+      td.textContent = 'No items yet. Add your first item above.';
+      tr.appendChild(td);
+      els.tbody.appendChild(tr);
+      computeSummary(items);
+      return;
+    }
+
+    items.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.setAttribute('data-gjs-name','Table Body Row');
+
+      const tdName = document.createElement('td');
+      tdName.setAttribute('data-gjs-name','Table Cell Name');
+      tdName.className = 'px-4 py-3 text-slate-800';
+      tdName.textContent = item.name;
+
+      const tdQty = document.createElement('td');
+      tdQty.setAttribute('data-gjs-name','Table Cell Quantity');
+      tdQty.className = 'px-4 py-3 text-slate-800';
+      tdQty.textContent = item.quantity;
+
+      const tdPrice = document.createElement('td');
+      tdPrice.setAttribute('data-gjs-name','Table Cell Price');
+      tdPrice.className = 'px-4 py-3 text-slate-800';
+      tdPrice.textContent = formatMoney(Number(item.price));
+
+      const tdActions = document.createElement('td');
+      tdActions.setAttribute('data-gjs-name','Table Cell Actions');
+      tdActions.className = 'px-4 py-3 text-right';
+
+      const editBtn = document.createElement('button');
+      editBtn.setAttribute('data-gjs-name','Edit Row Button');
+      editBtn.className = 'px-3 py-1.5 border gjs-t-border border-slate-300 text-slate-700 mr-2';
+      editBtn.textContent = 'Edit';
+      editBtn.dataset.action = 'edit';
+      editBtn.dataset.id = item.id;
+
+      const delBtn = document.createElement('button');
+      delBtn.setAttribute('data-gjs-name','Delete Row Button');
+      delBtn.className = 'px-3 py-1.5 border gjs-t-border border-red-200 text-red-600';
+      delBtn.textContent = 'Delete';
+      delBtn.dataset.action = 'delete';
+      delBtn.dataset.id = item.id;
+
+      tdActions.appendChild(editBtn);
+      tdActions.appendChild(delBtn);
+
+      tr.appendChild(tdName);
+      tr.appendChild(tdQty);
+      tr.appendChild(tdPrice);
+      tr.appendChild(tdActions);
+
+      els.tbody.appendChild(tr);
+    });
+
+    computeSummary(items);
+  }
+
+  els.form.addEventListener('submit', function(e){
+    e.preventDefault();
+    if(!validateForm()) return;
+
+    const name = els.name.value.trim();
+    const quantity = Number(els.quantity.value);
+    const price = Number(els.price.value);
+    const editingId = els.editingId.value;
+
+    const items = readItems();
+
+    if(editingId){
+      const idx = items.findIndex(i => i.id === editingId);
+      if(idx > -1){
+        items[idx] = { id: editingId, name, quantity, price };
+      }
+      writeItems(items);
+      render();
+      resetForm();
+    } else {
+      const newItem = { id: uid(), name, quantity, price };
+      items.push(newItem);
+      writeItems(items);
+      render();
+      resetForm();
+    }
+  });
+
+  els.cancelEditBtn.addEventListener('click', function(){
+    resetForm();
+  });
+
+  els.tbody.addEventListener('click', function(e){
+    const target = e.target;
+    if(!(target instanceof HTMLElement)) return;
+    const action = target.dataset.action;
+    const id = target.dataset.id;
+    if(!action || !id) return;
+
+    const items = readItems();
+    const item = items.find(i => i.id === id);
+
+    if(action === 'edit' && item){
+      enterEditMode(item);
+    } else if(action === 'delete'){
+      if(confirm('Are you sure you want to delete this item?')){
+        const next = items.filter(i => i.id !== id);
+        writeItems(next);
+        render();
+        if(els.editingId.value === id){
+          resetForm();
+        }
+      }
+    }
+  });
+
+  els.clearAllBtn.addEventListener('click', function(){
+    if(confirm('Clear all items? This cannot be undone.')){
+      writeItems([]);
+      render();
+      resetForm();
+    }
+  });
+
+  els.seedBtn.addEventListener('click', function(){
+    const demo = [
+      { id: uid(), name: 'Wireless Mouse', quantity: 12, price: 19.99 },
+      { id: uid(), name: 'Mechanical Keyboard', quantity: 5, price: 89.50 },
+      { id: uid(), name: 'USB-C Cable', quantity: 30, price: 7.25 },
+    ];
+    writeItems(demo);
+    render();
+    resetForm();
+  });
+
+  els.exportBtn.addEventListener('click', function(){
+    const data = readItems();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('data-gjs-name','Temporary Download Link');
+    a.href = url;
+    a.download = 'inventory.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  els.importFile.addEventListener('change', function(){
+    const file = els.importFile.files && els.importFile.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(){
+      try{
+        const parsed = JSON.parse(String(reader.result));
+        if(!Array.isArray(parsed)) throw new Error('Invalid data');
+        // Sanitize items
+        const clean = parsed.map(it => ({
+          id: (it && typeof it.id === 'string') ? it.id : uid(),
+          name: (it && typeof it.name === 'string') ? it.name : 'Unnamed',
+          quantity: Number.isFinite(Number(it?.quantity)) ? Math.max(0, Math.floor(Number(it.quantity))) : 0,
+          price: Number.isFinite(Number(it?.price)) ? Math.max(0, Number(it.price)) : 0,
+        }));
+        writeItems(clean);
+        render();
+        resetForm();
+      }catch(err){
+        alert('Failed to import JSON. Please provide a valid export.');
+      }finally{
+        els.importFile.value = '';
+      }
+    };
+    reader.onerror = function(){
+      alert('Could not read the file.');
+      els.importFile.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  // Initialize
+  render();
+})();
+    </script></body>
+</html>
